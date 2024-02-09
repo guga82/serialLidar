@@ -1,5 +1,6 @@
 const fs = require("fs");
 
+
 var pointsXYZ = [];
   // { x: 1.0, y: 2.0, z: 3.0 },
   // { x: 4.0, y: 5.0, z: 6.0 },
@@ -11,7 +12,7 @@ var pointsXYZ = [];
 const filePath = "output.xyz";
 
 
-var data = (variavel)=>{
+var convData = (variavel)=>{
 
   return (variavel
   .map((point) => `${point.x} ${point.y} ${point.z}`)
@@ -20,11 +21,11 @@ var data = (variavel)=>{
 
 
 
-// fs.writeFileSync(filePath, data, "utf-8");
+// fs.writeFileSync(filePath, convData, "utf-8");
 
 setTimeout(() => {
 
-  fs.writeFileSync(filePath, data(pointsXYZ), "utf-8");
+  fs.writeFileSync(filePath, convData(pointsXYZ), "utf-8");
 
   console.log(`Arquivo XYZ gerado com sucesso em ${filePath}`);
 }, 2000);
@@ -33,8 +34,8 @@ setTimeout(() => {
 function lidarToXYZ(angleDegrees, distance) {
   let coordenadas = {}
   const angleRadians = (angleDegrees * Math.PI) / 180.0;
-  coordenadas.x = parseInt(distance * Math.cos(angleRadians) * 100);
-  coordenadas.y = parseInt(distance * Math.sin(angleRadians) * 100);
+  coordenadas.x = parseInt(distance * Math.cos(angleRadians));
+  coordenadas.y = parseInt(distance * Math.sin(angleRadians));
   coordenadas.z = 0; // Se você souber a altura do sensor ou tiver informações adicionais, ajuste isso
 
   return coordenadas;
@@ -63,6 +64,8 @@ const port = new SerialPort({
 // Read data that is available but keep the stream in "paused mode"
 port.on("readable", function () {
   //   console.log("Data:", port.read());
+  // var data = Buffer.alloc(56);
+  // data = port.read()
   const data = port.read(); // Recebe os dados como um Buffer
 
   // Verifica se há dados
@@ -85,8 +88,9 @@ port.on("readable", function () {
     //agrupaBytes(7, 8)/100
 
     if (
-      data.readUInt8(5) <= 360 &&
+      data.readUInt8(5) <= 360 ||
       true
+      
       // ((agrupaBytes(7, 8) / 1000 >
       //   valores["mediaValores"][data.readUInt8(5)] * (1 - tol) &&
       //   agrupaBytes(7, 8) / 1000 <
@@ -95,16 +99,76 @@ port.on("readable", function () {
     ) {
       // console.log("###$#$#$#$#$#$#$$ Angulo: ", data.readUInt8(5))
       // console.log(new Date())
+      
+      console.log('Byte: ', data )
+
+
       const converteAng = (valorHexa) => (parseFloat((parseInt(valorHexa, 16) / 1000).toFixed(1)));
 
-      // console.log('Angulo: ', parseInt(data.readUInt8(5),16))
-      // console.log('Angulo: ', converteAng(agrupaBytes(5,6)));
+      
+      let anguloIni = agrupaBytes(5,6)
+      // console.log('angulo ini alto: ', data.readUInt8(5).toString(16) ) valor em hexadecimal
+      console.log('angulo ini convertido', anguloIni)
+      let tamanhoByte = data.length <= 58 ? data.length : 58
+      // console.log('$$$$$$$$$$$$$$$$$ ' , tamanhoByte)
+      let anguloFim = data.length > 7 ? agrupaBytes(tamanhoByte - 3,tamanhoByte - 2) : anguloIni
+      console.log('angulo fim convertido', anguloFim)
+
+      let qtdAngulos = (tamanhoByte - 10) / 3
+
+      console.log('Qtd angulos: ', qtdAngulos)
+      
+      let incAngulo = anguloFim > anguloIni ? (anguloFim - anguloIni) / qtdAngulos : (36000 + anguloFim - anguloIni) / qtdAngulos
+      console.log('Distancia: ', agrupaBytes(7, 8))
+      console.log( 'incremento do angulo: ',incAngulo)
+
+      for (let index = 1; index < qtdAngulos; index++) {
+        let anguloIndex = anguloIni + (index * incAngulo)
+        let distIndex = agrupaBytes(7 + (index * 3),8 + (index * 3))
+        let coordXYZ = lidarToXYZ(anguloIndex/100, distIndex)      
+
+
+        distIndex > 0 ? pointsXYZ.push(lidarToXYZ(anguloIndex/100, distIndex)) : '';
+
+        console.log("Angulo: ", anguloIndex/100)
+        console.log("Distancia: ", distIndex)
+        console.log("Coordenada XYZ: ", coordXYZ)
+      }
+
+      // console.log('Angulo Byte baixo: ', data.readUInt8(6))
+      // console.log('Angulo Hexa Ini: ', data.readUInt8(5))
+      // console.log('Angulo Hexa Fim: ', data.readUInt8(55))
+      // console.log('Angulo Inicial: ', converteAng(agrupaBytes(5,6)));
+      // // console.log('Angulo Final: ', converteAng(agrupaBytes(55,56)));
       // console.log('Distancia: ', agrupaBytes(7, 8) / 1000)
       // console.log(lidarToXYZ(converteAng(agrupaBytes(5,6)), agrupaBytes(7, 8) / 1000));
 
-      pointsXYZ.push(
-        lidarToXYZ(converteAng(agrupaBytes(5, 6)), agrupaBytes(7, 8) / 1000)
-      );
+      /*
+      // console.log('angulo ini alto: ', data.readUInt8(5).toString(16) ) valor em hexadecimal
+      let anguloIni = agrupaBytes(5,6)
+      console.log('angulo ini convertido', anguloIni)
+      let anguloFim = agrupaBytes(55,56)
+      let incAngulo = (anguloFim - anguloIni) / 16
+      console.log('Distancia: ', agrupaBytes(7, 8) / 1000)
+      for (let index = 1; index < 16; index++) {
+        let anguloIndex = anguloIni + (index * incAngulo)
+        let distIndex = agrupaBytes(7 + (index * 3),8 + (index * 3))
+        console.log("Angulo: ", anguloIndex/100)
+        console.log("Distancia: ", distIndex/1000)
+      }
+      console.log('angulo fim convertido', anguloFim)
+      console.log('Byte: ', data )
+      // console.log('Angulo Byte baixo: ', data.readUInt8(6))
+      // console.log('Angulo Hexa Ini: ', data.readUInt8(5))
+      // console.log('Angulo Hexa Fim: ', data.readUInt8(55))
+      // console.log('Angulo Inicial: ', converteAng(agrupaBytes(5,6)));
+      // // console.log('Angulo Final: ', converteAng(agrupaBytes(55,56)));
+      // console.log('Distancia: ', agrupaBytes(7, 8) / 1000)
+      // console.log(lidarToXYZ(converteAng(agrupaBytes(5,6)), agrupaBytes(7, 8) / 1000));
+*/
+      // pointsXYZ.push(
+      //   lidarToXYZ(converteAng(agrupaBytes(5, 6)), agrupaBytes(7, 8) / 1000)
+      // );
 
       valores["ultimosValores"][data.readUInt8(5)] =
         valores["ultimosValores"][data.readUInt8(5)] || [];
