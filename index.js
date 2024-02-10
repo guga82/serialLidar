@@ -28,7 +28,7 @@ setTimeout(() => {
   fs.writeFileSync(filePath, convData(pointsXYZ), "utf-8");
 
   console.log(`Arquivo XYZ gerado com sucesso em ${filePath}`);
-}, 2000);
+}, 5000);
 
 // Função para converter ângulo e medida em coordenadas XYZ
 function lidarToXYZ(angleDegrees, distance) {
@@ -113,6 +113,8 @@ port.on("readable", function () {
       // console.log('$$$$$$$$$$$$$$$$$ ' , tamanhoByte)
       let anguloFim = data.length > 7 ? agrupaBytes(tamanhoByte - 3,tamanhoByte - 2) : anguloIni
       console.log('angulo fim convertido', anguloFim)
+
+      pointsXYZ.push(lidarToXYZ(anguloIni/100, agrupaBytes(7,8) ))
 
       let qtdAngulos = (tamanhoByte - 10) / 3
 
