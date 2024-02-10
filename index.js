@@ -1,30 +1,22 @@
 const fs = require("fs");
 
-
 var pointsXYZ = [];
-  // { x: 1.0, y: 2.0, z: 3.0 },
-  // { x: 4.0, y: 5.0, z: 6.0 },
-  // { x: 7.0, y: 8.0, z: 9.0 },
+// { x: 1.0, y: 2.0, z: 3.0 },
+// { x: 4.0, y: 5.0, z: 6.0 },
+// { x: 7.0, y: 8.0, z: 9.0 },
 // ];
 
 // setInterval(()=>(console.log(typeof pointsXYZ),console.log(pointsXYZ[pointsXYZ.length-1]),console.log(data(pointsXYZ))),2000)
 
 const filePath = "output.xyz";
 
-
-var convData = (variavel)=>{
-
-  return (variavel
-  .map((point) => `${point.x} ${point.y} ${point.z}`)
-  .join("\n"))
-}
-
-
+var convData = (variavel) => {
+  return variavel.map((point) => `${point.x} ${point.y} ${point.z}`).join("\n");
+};
 
 // fs.writeFileSync(filePath, convData, "utf-8");
 
 setTimeout(() => {
-
   fs.writeFileSync(filePath, convData(pointsXYZ), "utf-8");
 
   console.log(`Arquivo XYZ gerado com sucesso em ${filePath}`);
@@ -32,7 +24,7 @@ setTimeout(() => {
 
 // Função para converter ângulo e medida em coordenadas XYZ
 function lidarToXYZ(angleDegrees, distance) {
-  let coordenadas = {}
+  let coordenadas = {};
   const angleRadians = (angleDegrees * Math.PI) / 180.0;
   coordenadas.x = parseInt(distance * Math.cos(angleRadians));
   coordenadas.y = parseInt(distance * Math.sin(angleRadians));
@@ -40,6 +32,26 @@ function lidarToXYZ(angleDegrees, distance) {
 
   return coordenadas;
 }
+
+const pointsFilter = async (angle, distance) => {
+  let indexAngle = parseInt(angle.toFixed(0));
+  let indexDistance = distance;
+
+  valores["ultimosValores"][indexAngle] =
+    valores["ultimosValores"][indexAngle] || [];
+    // console.log('indexDistance: ', indexDistance)
+  indexDistance > 0 ? valores["ultimosValores"][indexAngle].push(parseInt(indexDistance)) : '';
+
+  if (valores["ultimosValores"][indexAngle].length >= 10) {
+    let average = await calcularMediaSemOutliers(
+      valores["ultimosValores"][indexAngle],
+      indexAngle
+    );
+    average > 0 ? valores["mediaValores"][indexAngle] = average : ''
+    valores["ultimosValores"][indexAngle].shift();
+  }
+};
+
 
 const { SerialPort } = require("serialport");
 // or
@@ -71,7 +83,7 @@ port.on("readable", function () {
   // Verifica se há dados
   if (data && data.length >= 8) {
     // Certifique-se de que há pelo menos 8 bytes disponíveis
-    const agrupaBytes = (high, low) => {
+    const  agrupaBytes = (high, low) => {
       // Extraindo os bytes High e Low
       const highByte = data.readUInt8(high); // Byte 6
       const lowByte = data.readUInt8(low); // Byte 7
@@ -90,7 +102,7 @@ port.on("readable", function () {
     if (
       data.readUInt8(5) <= 360 ||
       true
-      
+
       // ((agrupaBytes(7, 8) / 1000 >
       //   valores["mediaValores"][data.readUInt8(5)] * (1 - tol) &&
       //   agrupaBytes(7, 8) / 1000 <
@@ -99,42 +111,52 @@ port.on("readable", function () {
     ) {
       // console.log("###$#$#$#$#$#$#$$ Angulo: ", data.readUInt8(5))
       // console.log(new Date())
-      
-      console.log('Byte: ', data )
 
+      // console.log("Byte: ", data);
 
-      const converteAng = (valorHexa) => (parseFloat((parseInt(valorHexa, 16) / 1000).toFixed(1)));
+      const converteAng = (valorHexa) =>
+        parseFloat((parseInt(valorHexa, 16) / 1000).toFixed(1));
 
-      
-      let anguloIni = agrupaBytes(5,6)
+      let anguloIni = agrupaBytes(5, 6);
       // console.log('angulo ini alto: ', data.readUInt8(5).toString(16) ) valor em hexadecimal
-      console.log('angulo ini convertido', anguloIni)
-      let tamanhoByte = data.length <= 58 ? data.length : 58
+      // console.log("angulo ini convertido", anguloIni);
+      let tamanhoByte = data.length <= 58 ? data.length : 58;
       // console.log('$$$$$$$$$$$$$$$$$ ' , tamanhoByte)
-      let anguloFim = data.length > 7 ? agrupaBytes(tamanhoByte - 3,tamanhoByte - 2) : anguloIni
-      console.log('angulo fim convertido', anguloFim)
+      let anguloFim =
+        data.length > 7
+          ? agrupaBytes(tamanhoByte - 3, tamanhoByte - 2)
+          : anguloIni;
+      // console.log("angulo fim convertido", anguloFim);
 
-      pointsXYZ.push(lidarToXYZ(anguloIni/100, agrupaBytes(7,8) ))
+      // pointsXYZ.push(lidarToXYZ(anguloIni / 100, agrupaBytes(7, 8)));
+      pointsFilter(anguloIni/100, agrupaBytes(7, 8));
 
-      let qtdAngulos = (tamanhoByte - 10) / 3
+      let qtdAngulos = (tamanhoByte - 10) / 3;
 
-      console.log('Qtd angulos: ', qtdAngulos)
-      
-      let incAngulo = anguloFim > anguloIni ? (anguloFim - anguloIni) / qtdAngulos : (36000 + anguloFim - anguloIni) / qtdAngulos
-      console.log('Distancia: ', agrupaBytes(7, 8))
-      console.log( 'incremento do angulo: ',incAngulo)
+      // console.log("Qtd angulos: ", qtdAngulos);
+
+      let incAngulo =
+        anguloFim > anguloIni
+          ? (anguloFim - anguloIni) / qtdAngulos
+          : (36000 + anguloFim - anguloIni) / qtdAngulos;
+      // console.log("Distancia: ", agrupaBytes(7, 8));
+      // console.log("incremento do angulo: ", incAngulo);
 
       for (let index = 1; index < qtdAngulos; index++) {
-        let anguloIndex = anguloIni + (index * incAngulo)
-        let distIndex = agrupaBytes(7 + (index * 3),8 + (index * 3))
-        let coordXYZ = lidarToXYZ(anguloIndex/100, distIndex)      
+        let anguloIndex = anguloIni + index * incAngulo;
+        let distIndex = agrupaBytes(7 + index * 3, 8 + index * 3);
+        // console.log('Distancia: ', distIndex)
+        let coordXYZ = lidarToXYZ(anguloIndex / 100, distIndex);
 
+        // distIndex > 0
+        //   ? pointsXYZ.push(lidarToXYZ(anguloIndex / 100, distIndex))
+        //   : "";
 
-        distIndex > 0 ? pointsXYZ.push(lidarToXYZ(anguloIndex/100, distIndex)) : '';
+        pointsFilter(anguloIndex/100, distIndex);
 
-        console.log("Angulo: ", anguloIndex/100)
-        console.log("Distancia: ", distIndex)
-        console.log("Coordenada XYZ: ", coordXYZ)
+        // console.log("Angulo: ", anguloIndex / 100);
+        // console.log("Distancia: ", distIndex);
+        // console.log("Coordenada XYZ: ", coordXYZ);
       }
 
       // console.log('Angulo Byte baixo: ', data.readUInt8(6))
@@ -172,18 +194,7 @@ port.on("readable", function () {
       //   lidarToXYZ(converteAng(agrupaBytes(5, 6)), agrupaBytes(7, 8) / 1000)
       // );
 
-      valores["ultimosValores"][data.readUInt8(5)] =
-        valores["ultimosValores"][data.readUInt8(5)] || [];
-      valores["ultimosValores"][data.readUInt8(5)].push(
-        agrupaBytes(7, 8) / 1000
-      );
-      if (valores["ultimosValores"][data.readUInt8(5)].length >= 10) {
-        valores["ultimosValores"][data.readUInt8(5)].shift();
-        valores["mediaValores"][data.readUInt8(5)] = calcularMediaSemOutliers(
-          valores["ultimosValores"][data.readUInt8(5)],
-          data.readUInt8(5)
-        );
-      }
+      
     }
 
     // console.log(new Date());
@@ -191,7 +202,7 @@ port.on("readable", function () {
   }
 });
 
-// setInterval(() => console.log(valores), 10000);
+setInterval(() => console.log(valores), 2000);
 
 // Switches the port into "flowing mode"
 // port.on("data", function (data) {
@@ -200,34 +211,35 @@ port.on("readable", function () {
 
 // Pipe the data into another stream (like a parser or standard out)
 //const lineStream = port.pipe(new Readline())
-function calcularMediaSemOutliers(dados, desviosPadraoLimite = 1.8, angulo) {
+async function calcularMediaSemOutliers(dados, desviosPadraoLimite = 1.8, angulo) {
   // Ordena os dados
-  const dadosOrdenados = dados.slice().sort((a, b) => a - b);
+  // const dadosOrdenados = await dados.slice().sort((a, b) => a - b);
+  const dadosOrdenados = await dados.sort((a,b)=>{if (a>b) return 1; else if (a<b) return - 1; else return 0})
 
   // Calcula a média e o desvio padrão
-  const media = calcularMedia(dadosOrdenados);
-  const desvioPadrao = calcularDesvioPadrao(dadosOrdenados, media);
+  const media = await calcularMedia(dadosOrdenados);
+  const desvioPadrao = await calcularDesvioPadrao(dadosOrdenados, media);
   valores["desvioPadrao"][angulo] = desvioPadrao;
 
   // Filtra os valores que não são considerados outliers
-  const dadosFiltrados = dadosOrdenados.filter((valor) => {
+  const dadosFiltrados = await dadosOrdenados.filter((valor) => {
     const distanciaEmDesviosPadrao = Math.abs(valor - media) / desvioPadrao;
     return distanciaEmDesviosPadrao <= desviosPadraoLimite;
   });
 
   // Calcula a média dos valores filtrados
-  const mediaSemOutliers = calcularMedia(dadosFiltrados);
+  const mediaSemOutliers = await calcularMedia(dadosFiltrados);
+  // mediaSemOutliers > 0 ? '' : console.log('Media: ', dadosOrdenados)
 
-  return parseFloat(mediaSemOutliers.toFixed(3));
+  return await calcularMedia(dadosFiltrados);
 }
 
-function calcularMedia(dados) {
-  const soma = dados.reduce((acc, valor) => acc + valor, 0);
-  return soma / dados.length;
+async function calcularMedia(dados) {
+  return await dados.reduce((acc, valor) => acc + parseInt(valor), 0) / dados.length;
 }
 
-function calcularDesvioPadrao(dados, media) {
-  const diferencaQuadrada = dados.map((valor) => Math.pow(valor - media, 2));
+async function calcularDesvioPadrao(dados, media) {
+  const diferencaQuadrada = await dados.map((valor) => Math.pow(valor - media, 2));
   const variancia =
     diferencaQuadrada.reduce((acc, valor) => acc + valor, 0) / dados.length;
   return Math.sqrt(variancia);
@@ -238,4 +250,4 @@ const amostra = [
   12.823, 15.033, 14.321, 13.954, 11.001, 10.777, 16.151, 18.484, 20.22, 25.321,
 ];
 const mediaSemOutliers = calcularMediaSemOutliers(amostra);
-console.log("Média sem outliers:", mediaSemOutliers);
+// console.log("Média sem outliers:", mediaSemOutliers);
