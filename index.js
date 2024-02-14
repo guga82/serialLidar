@@ -16,8 +16,11 @@ var convData = (variavel) => {
 
 // fs.writeFileSync(filePath, convData, "utf-8");
 
-setTimeout(() => {
-  fs.writeFileSync(filePath, convData(pointsXYZ), "utf-8");
+setTimeout(async () => {
+
+  
+  fs.writeFileSync(filePath, convData(valores['xyz']), "utf-8");
+  // fs.writeFileSync(filePath, convData(pointsXYZ), "utf-8");
 
   console.log(`Arquivo XYZ gerado com sucesso em ${filePath}`);
 }, 5000);
@@ -129,7 +132,7 @@ port.on("readable", function () {
       // console.log("angulo fim convertido", anguloFim);
 
       // pointsXYZ.push(lidarToXYZ(anguloIni / 100, agrupaBytes(7, 8)));
-      pointsFilter(anguloIni/100, agrupaBytes(7, 8));
+      anguloIni/100 < 360 ? pointsFilter(anguloIni/100, agrupaBytes(7, 8)) : '';
 
       let qtdAngulos = (tamanhoByte - 10) / 3;
 
@@ -152,7 +155,7 @@ port.on("readable", function () {
         //   ? pointsXYZ.push(lidarToXYZ(anguloIndex / 100, distIndex))
         //   : "";
 
-        pointsFilter(anguloIndex/100, distIndex);
+        anguloIndex/100 < 360 ? pointsFilter(anguloIndex/100, distIndex) : '';
 
         // console.log("Angulo: ", anguloIndex / 100);
         // console.log("Distancia: ", distIndex);
@@ -202,7 +205,10 @@ port.on("readable", function () {
   }
 });
 
-setInterval(() => console.log(valores), 2000);
+setInterval(async () => {
+  valores['xyz'] = Object.keys(valores['mediaValores']).map(angle=>lidarToXYZ(angle,valores['mediaValores'][angle]))
+  console.log(valores)
+}, 2000);
 
 // Switches the port into "flowing mode"
 // port.on("data", function (data) {
